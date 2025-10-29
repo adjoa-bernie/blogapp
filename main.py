@@ -11,13 +11,19 @@ class PostBase(BaseModel):
     published: bool = True
     rating: Optional[int] = None
 
-@app.get("/")
-def root():
-    return {"message": "Welcome to my blog API!"}
+available_posts = [{"title": "title of post 1", "content": "content of post 1", "id": 1},
+            {"title": "favorite foods", "content": "I like pizza", "id": 2},
+            {"title": "title of post 3", "content": "content of post 3", "id": 3}]
+
+@app.get("/posts")
+def get_posts():
+    return {"data": available_posts}
 
 
 @app.post('/posts')
 def create_post(post: PostBase):
-    print(post)
-    return {"message": "Post created successfully!"}
+    new_id = max([current_post['id'] for current_post in available_posts]) + 1
+    new_post = {**post.model_dump(), "id": new_id}
+    available_posts.append(new_post)
+    return {"data": post}
 

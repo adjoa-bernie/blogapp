@@ -10,6 +10,9 @@ class PostBase(BaseModel):
     published: bool = True
     rating: Optional[int] = None
 
+class PostUpdate(PostBase):
+    pass
+
 available_posts = [{"title": "title of post 1", "content": "content of post 1", "id": 1},
             {"title": "favorite foods", "content": "I like pizza", "id": 2},
             {"title": "title of post 3", "content": "content of post 3", "id": 3}]
@@ -36,11 +39,19 @@ def create_post(post: PostBase):
     return {"data": post}
 
 
-@app.delete("/posts/{id}")
+@app.put("/posts/{id}")
+def update_post(id:int, post: PostUpdate):
+    for idx, existing_post in enumerate(available_posts):
+        if existing_post["id"] == id:
+            updated_post = {**post.model_dump(), "id": id}
+            available_posts[idx] = updated_post
+            return {"data": updated_post}
+
+@app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id:int):
     for idx, post in enumerate(available_posts):
         if post['id'] == id:
             del available_posts[idx]
-            return {"message": f"post with id: {id} was deleted"}
+            return 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"post with id: {id} was not found")

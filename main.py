@@ -35,3 +35,12 @@ def create_post(post: PostBase):
     available_posts.append(new_post)
     return {"data": post}
 
+
+@app.delete("/posts/{id}")
+def delete_post(id:int):
+    for idx, post in enumerate(available_posts):
+        if post['id'] == id:
+            del available_posts[idx]
+            return {"message": f"post with id: {id} was deleted"}
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"post with id: {id} was not found")

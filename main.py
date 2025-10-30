@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import FastAPI
+from fastapi import FastAPI, status,HTTPException
 from pydantic import BaseModel, Field
 
 app = FastAPI()
@@ -24,10 +24,11 @@ def get_post(id:int):
     for post in available_posts:
         if post['id'] == id:
             return {"post_detail": post}
-    return {"message": f"post with id: {id} was not found"}
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"post with id: {id} was not found")
 
 
-@app.post('/posts')
+@app.post('/posts', status_code=status.HTTP_201_CREATED)
 def create_post(post: PostBase):
     new_id = max([current_post['id'] for current_post in available_posts]) + 1
     new_post = {**post.model_dump(), "id": new_id}

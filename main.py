@@ -1,6 +1,5 @@
 from typing import Optional
 from fastapi import FastAPI
-from fastapi.params import Body
 from pydantic import BaseModel, Field
 
 app = FastAPI()
@@ -18,6 +17,14 @@ available_posts = [{"title": "title of post 1", "content": "content of post 1", 
 @app.get("/posts")
 def get_posts():
     return {"data": available_posts}
+
+
+@app.get("/posts/{id}")
+def get_post(id:int):
+    for post in available_posts:
+        if post['id'] == id:
+            return {"post_detail": post}
+    return {"message": f"post with id: {id} was not found"}
 
 
 @app.post('/posts')

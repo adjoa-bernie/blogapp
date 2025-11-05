@@ -8,7 +8,6 @@ class PostBase(BaseModel):
     title: str = Field(..., max_length=100)
     content: str 
     published: bool = True
-    rating: Optional[int] = None
 
 class PostUpdate(PostBase):
     pass

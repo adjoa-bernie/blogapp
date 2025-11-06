@@ -1,6 +1,7 @@
-from typing import Optional
-from fastapi import FastAPI, status,HTTPException
+from fastapi import FastAPI, status, HTTPException
 from pydantic import BaseModel, Field
+import psycopg
+from psycopg.rows import dict_row
 
 app = FastAPI()
 
@@ -12,13 +13,25 @@ class PostBase(BaseModel):
 class PostUpdate(PostBase):
     pass
 
+
+try:
+    conn = psycopg.connect(dbname='fast-social', user ='postgres', password='adjoa', row_factory=dict_row) 
+    cur = conn.cursor()
+    print("Connected to the database successfully")
+
+except Exception as error: 
+    print("Error connecting to the database:", error)
+
+
 available_posts = [{"title": "title of post 1", "content": "content of post 1", "id": 1},
             {"title": "favorite foods", "content": "I like pizza", "id": 2},
             {"title": "title of post 3", "content": "content of post 3", "id": 3}]
 
 @app.get("/posts")
 def get_posts():
-    return {"data": available_posts}
+    cur.execute("SELECT * FROM posts")
+    posts = cur.fetchall()
+    return {"data": posts}
 
 
 @app.get("/posts/{id}")
@@ -27,15 +40,18 @@ def get_post(id:int):
         if post['id'] == id:
             return {"post_detail": post}
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"post with id: {id} was not found")
+        detail=f"post with id: {id} was not found")
 
 
 @app.post('/posts', status_code=status.HTTP_201_CREATED)
 def create_post(post: PostBase):
-    new_id = max([current_post['id'] for current_post in available_posts]) + 1
-    new_post = {**post.model_dump(), "id": new_id}
-    available_posts.append(new_post)
-    return {"data": post}
+    cur.execute(
+       """INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *""",
+        (post.title, post.content, post.published))
+    new_post = cur.fetchone()
+    conn.commit()
+    return {"data": new_post}
+
 
 
 @app.put("/posts/{id}")

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException
 from pydantic import BaseModel, Field
 import psycopg
 from psycopg.rows import dict_row
@@ -68,9 +68,10 @@ def update_post(id:int, post: PostUpdate):
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id:int):
-    for idx, post in enumerate(available_posts):
-        if post['id'] == id:
-            del available_posts[idx]
-            return 
+    cur.execute("DELETE FROM posts WHERE id = %s RETURNING *", (str(id),))
+    deleted_post = cur.fetchone()
+    conn.commit()
+    if deleted_post:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"post with id: {id} was not found")

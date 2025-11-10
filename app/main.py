@@ -18,6 +18,9 @@ try:
     conn = psycopg.connect(dbname='fast-social', user ='postgres', password='adjoa', row_factory=dict_row) 
     cur = conn.cursor()
     print("Connected to the database successfully")
+    cur.execute("SELECT current_database();")
+    print(cur.fetchone())
+
 
 except Exception as error: 
     print("Error connecting to the database:", error)
@@ -36,9 +39,10 @@ def get_posts():
 
 @app.get("/posts/{id}")
 def get_post(id:int):
-    for post in available_posts:
-        if post['id'] == id:
-            return {"post_detail": post}
+    cur.execute("SELECT * FROM posts WHERE id = %s", (str(id),))
+    post = cur.fetchone()
+    if post:
+        return {"post_detail": post}
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
         detail=f"post with id: {id} was not found")
 
@@ -46,7 +50,7 @@ def get_post(id:int):
 @app.post('/posts', status_code=status.HTTP_201_CREATED)
 def create_post(post: PostBase):
     cur.execute(
-       """INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *""",
+       "INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *",
         (post.title, post.content, post.published))
     new_post = cur.fetchone()
     conn.commit()

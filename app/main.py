@@ -1,76 +1,54 @@
-from fastapi import FastAPI, Response, status, HTTPException
-from pydantic import BaseModel, Field
-import psycopg
-from psycopg.rows import dict_row
+from fastapi import FastAPI, Response, status, HTTPException, Depends
+from sqlalchemy.orm import Session
+from . import models, schemas, database
+
+
+# Create tables
+models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI()
 
-class PostBase(BaseModel):
-    title: str = Field(..., max_length=100)
-    content: str 
-    published: bool = True
-
-class PostUpdate(PostBase):
-    pass
-
-
-try:
-    conn = psycopg.connect(dbname='fast-social', user ='postgres', password='adjoa', row_factory=dict_row) 
-    cur = conn.cursor()
-    print("Connected to the database successfully")
-    cur.execute("SELECT current_database();")
-    print(cur.fetchone())
-
-
-except Exception as error: 
-    print("Error connecting to the database:", error)
-
-
-available_posts = [{"title": "title of post 1", "content": "content of post 1", "id": 1},
-            {"title": "favorite foods", "content": "I like pizza", "id": 2},
-            {"title": "title of post 3", "content": "content of post 3", "id": 3}]
-
 @app.get("/posts")
-def get_posts():
-    cur.execute("SELECT * FROM posts")
-    posts = cur.fetchall()
+def get_posts(db: Session = Depends(database.get_db)):
+    posts = db.query(models.Post).all()
     return {"data": posts}
 
 
+@app.post('/posts', status_code=status.HTTP_201_CREATED)
+def create_post(post: schemas.Post, db: Session = Depends(database.get_db)):
+    new_post = models.Post(**post.model_dump())
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+    return {"data": new_post}
+
+
 @app.get("/posts/{id}")
-def get_post(id:int):
-    cur.execute("SELECT * FROM posts WHERE id = %s", (str(id),))
-    post = cur.fetchone()
+def get_post(id:int,db: Session = Depends(database.get_db)):
+    post = db.query(models.Post).filter(models.Post.id == id).first();
     if post:
         return {"post_detail": post}
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
         detail=f"post with id: {id} was not found")
 
 
-@app.post('/posts', status_code=status.HTTP_201_CREATED)
-def create_post(post: PostBase):
-    cur.execute(
-       "INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *",
-        (post.title, post.content, post.published))
-    new_post = cur.fetchone()
-    conn.commit()
-    return {"data": new_post}
-
-
-
 @app.put("/posts/{id}")
-def update_post(id:int, post: PostUpdate):
-    for idx, existing_post in enumerate(available_posts):
-        if existing_post["id"] == id:
-            updated_post = {**post.model_dump(), "id": id}
-            available_posts[idx] = updated_post
-            return {"data": updated_post}
+def update_post(id:int, post_schema: schemas.PostUpdate, db: Session = Depends(database.get_db)):
+    post = db.query(models.Post).filter(models.Post.id == id)
+    post_to_update = post.first()
+    if post_to_update:
+        post.update(post_schema.model_dump())
+        db.commit()
+        return {"data": post.first()}
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"post with id: {id} was not found")
+
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id:int):
-    cur.execute("DELETE FROM posts WHERE id = %s RETURNING *", (str(id),))
-    deleted_post = cur.fetchone()
-    conn.commit()
+def delete_post(id:int,db: Session = Depends(database.get_db)):
+    deleted_post = db.query(models.Post).filter(models.Post.id == id).first()
+    db.delete(deleted_post)
+    db.commit()
     if deleted_post:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,

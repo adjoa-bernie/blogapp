@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field,EmailStr
+from datetime import datetime
 
 class Post(BaseModel):
     title: str = Field(..., max_length=100)
@@ -10,3 +11,18 @@ class Post(BaseModel):
 
 class PostUpdate(Post):
     pass
+
+class User(BaseModel):
+    email: EmailStr
+    password: str
+
+    class Config:
+        orm_mode = True
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    created_at: datetime
+
+    class Config:
+        orm_mode = True

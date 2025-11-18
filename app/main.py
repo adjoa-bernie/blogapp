@@ -1,14 +1,17 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends
 from sqlalchemy.orm import Session
+from pwdlib import PasswordHash
 from . import models, schemas, database
 
 
 # Create tables
 models.Base.metadata.create_all(bind=database.engine)
 
+password_hash = PasswordHash.recommended()
+
 app = FastAPI()
 
-@app.get("/posts")
+@app.get("/posts", response_model=list[schemas.Post])
 def get_posts(db: Session = Depends(database.get_db)):
     posts = db.query(models.Post).all()
     return posts
@@ -21,6 +24,7 @@ def create_post(post: schemas.Post, db: Session = Depends(database.get_db)):
     db.commit()
     db.refresh(new_post)
     return new_post
+
 
 
 @app.get("/posts/{id}")
@@ -53,3 +57,14 @@ def delete_post(id:int,db: Session = Depends(database.get_db)):
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"post with id: {id} was not found")
+
+
+@app.post('/users', status_code=status.HTTP_201_CREATED,response_model=schemas.UserResponse)
+def create_user(user: schemas.User, db: Session = Depends(database.get_db)):
+    user.password = password_hash.hash(user.password)
+    new_user = models.User(**user.model_dump())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+

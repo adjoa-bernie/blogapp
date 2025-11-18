@@ -11,7 +11,7 @@ app = FastAPI()
 @app.get("/posts")
 def get_posts(db: Session = Depends(database.get_db)):
     posts = db.query(models.Post).all()
-    return {"data": posts}
+    return posts
 
 
 @app.post('/posts', status_code=status.HTTP_201_CREATED)
@@ -20,14 +20,14 @@ def create_post(post: schemas.Post, db: Session = Depends(database.get_db)):
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
-    return {"data": new_post}
+    return new_post
 
 
 @app.get("/posts/{id}")
 def get_post(id:int,db: Session = Depends(database.get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first();
     if post:
-        return {"post_detail": post}
+        return post
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
         detail=f"post with id: {id} was not found")
 
@@ -39,7 +39,7 @@ def update_post(id:int, post_schema: schemas.PostUpdate, db: Session = Depends(d
     if post_to_update:
         post.update(post_schema.model_dump())
         db.commit()
-        return {"data": post.first()}
+        return post.first()
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"post with id: {id} was not found")
 

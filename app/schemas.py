@@ -12,6 +12,13 @@ class Post(BaseModel):
 class PostUpdate(Post):
     pass
 
+class PostResponse(Post):
+    id: int
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
 class User(BaseModel):
     email: EmailStr
     password: str

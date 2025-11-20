@@ -1,6 +1,8 @@
 from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, text
 from .database import Base
 
+
+
 class Post(Base):
     __tablename__ = "posts"
 
@@ -19,3 +21,4 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     password = Column(String, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=text('now()'))
+

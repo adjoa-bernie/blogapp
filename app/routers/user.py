@@ -4,6 +4,7 @@ from fastapi import Response, status, HTTPException, Depends, APIRouter
 
 router = APIRouter(
     prefix="/users",
+    tags=["Users"]
 )
 
 @router.get("", response_model=list[schemas.UserResponse])
